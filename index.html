@@ -1710,6 +1710,38 @@ table.cmp td{color:var(--text);}
   </div>
 </div>
 
+<!-- ===================== MODAL: STAFF LOGIN ===================== -->
+<div class="modal" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <div class="modal__box" style="width:min(420px,100%)">
+    <div class="modal__head">
+      <div>
+        <h3 class="h3" id="loginTitle">Akses Staff</h3>
+        <p class="small muted" style="margin-top:6px;">Masukkan ID Staff dan password untuk menjana resit.</p>
+      </div>
+      <button class="modal__close" type="button" data-close-modal aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="staffLoginForm" autocomplete="off" novalidate>
+      <div class="field">
+        <label for="staffId">ID Staff</label>
+        <input class="input" type="text" id="staffId" name="staffId" required autocomplete="username" autocapitalize="off" spellcheck="false" />
+      </div>
+      <div class="field">
+        <label for="staffPass">Password</label>
+        <input class="input" type="password" id="staffPass" name="staffPass" required autocomplete="current-password" />
+      </div>
+      <p id="loginError" class="small" style="color:var(--danger);display:none;margin:-6px 0 14px;">
+        ⚠ ID Staff atau password tidak sah.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn--primary" type="submit" style="flex:1;">Login</button>
+        <button class="btn btn--ghost" type="button" data-close-modal>Batal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ===================== MODAL: RECEIPT GENERATOR ===================== -->
 <div class="modal" id="receiptModal" role="dialog" aria-modal="true" aria-labelledby="receiptTitle">
   <div class="modal__box receipt-modal__box">
@@ -1860,11 +1892,7 @@ table.cmp td{color:var(--text);}
 }
 </script>
 
-<!-- ===================== FIREBASE INIT (lazy) =====================
-     Dimuatkan secara idle supaya tidak menyekat render awal.
-     Nota: Firebase belum digunakan oleh app. Jika tidak diperlukan,
-     buang blok ini sepenuhnya untuk mengurangkan saiz & risiko.
--->
+<!-- ===================== FIREBASE INIT (lazy) ===================== -->
 <script type="module">
   async function initFirebase() {
     try {
@@ -1930,291 +1958,142 @@ table.cmp td{color:var(--text);}
     storageKey: 'corakempire_repair_state_v1'
   };
 
+  /* ===== STAFF AUTH ===== */
+  const STAFF_CREDENTIALS = {
+    id: 'nxfi99',
+    password: 'nxfi99@'
+  };
+  const AUTH_KEY = 'corakempire_staff_auth_v1';
+  const AUTH_TIMEOUT_MS = 60 * 60 * 1000; // 1 jam sesi
+
+  function isStaffAuthenticated() {
+    try {
+      const raw = sessionStorage.getItem(AUTH_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (!data || data.ok !== true) return false;
+      if (Date.now() - (data.ts || 0) > AUTH_TIMEOUT_MS) {
+        sessionStorage.removeItem(AUTH_KEY);
+        return false;
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+  function setStaffAuthenticated() {
+    try {
+      sessionStorage.setItem(AUTH_KEY, JSON.stringify({ ok: true, ts: Date.now() }));
+    } catch (e) {}
+  }
+  function clearStaffAuth() {
+    try { sessionStorage.removeItem(AUTH_KEY); } catch (e) {}
+  }
+
   /* =======================================================================
      1. DATA
      ======================================================================= */
   const lcdGrades = {
     iphone: [
-      {
-        id: 'incell',
-        name: 'INCELL',
+      { id: 'incell', name: 'INCELL',
         tag: { bm: 'LCD · Pilihan jimat', en: 'LCD · Budget option' },
-        desc: {
-          bm: 'Pilihan paparan LCD yang biasanya lebih menjimatkan bagi model iPhone yang serasi.',
-          en: 'An LCD display option that is usually more budget-friendly for compatible iPhone models.'
-        },
+        desc: { bm: 'Pilihan paparan LCD yang biasanya lebih menjimatkan bagi model iPhone yang serasi.', en: 'An LCD display option that is usually more budget-friendly for compatible iPhone models.' },
         tech: { bm: 'LCD (backlight)', en: 'LCD (backlit)' },
         contrast: { bm: 'Tiada kontras OLED', en: 'No OLED-level contrast' },
-        features: {
-          bm: ['Teknologi panel LCD dengan backlight', 'Ketebalan modul boleh berbeza dari panel asal', 'Kecerahan dan sudut pandangan bergantung pada pengeluar'],
-          en: ['LCD panel technology with backlight', 'Module thickness may differ from the original panel', 'Brightness and viewing angles vary by manufacturer']
-        },
-        pros: {
-          bm: ['Kos lebih rendah', 'Sesuai untuk kegunaan harian asas'],
-          en: ['Lower cost', 'Suitable for basic daily use']
-        },
-        cons: {
-          bm: ['Kontras dan warna hitam tidak sedalam OLED', 'Pengalaman penggunaan boleh berbeza daripada panel asal'],
-          en: ['Contrast and black levels are not as deep as OLED', 'User experience may differ from the original panel']
-        }
+        features: { bm: ['Teknologi panel LCD dengan backlight', 'Ketebalan modul boleh berbeza dari panel asal', 'Kecerahan dan sudut pandangan bergantung pada pengeluar'], en: ['LCD panel technology with backlight', 'Module thickness may differ from the original panel', 'Brightness and viewing angles vary by manufacturer'] },
+        pros: { bm: ['Kos lebih rendah', 'Sesuai untuk kegunaan harian asas'], en: ['Lower cost', 'Suitable for basic daily use'] },
+        cons: { bm: ['Kontras dan warna hitam tidak sedalam OLED', 'Pengalaman penggunaan boleh berbeza daripada panel asal'], en: ['Contrast and black levels are not as deep as OLED', 'User experience may differ from the original panel'] }
       },
-      {
-        id: 'hard-oled',
-        name: 'HARD OLED',
+      { id: 'hard-oled', name: 'HARD OLED',
         tag: { bm: 'OLED · Substrat tegar', en: 'OLED · Rigid substrate' },
-        desc: {
-          bm: 'Menggunakan panel OLED dengan substrat tegar.',
-          en: 'Uses an OLED panel with a rigid substrate.'
-        },
+        desc: { bm: 'Menggunakan panel OLED dengan substrat tegar.', en: 'Uses an OLED panel with a rigid substrate.' },
         tech: { bm: 'OLED tegar', en: 'Rigid OLED' },
         contrast: { bm: 'Ya — hitam mendalam', en: 'Yes — deep blacks' },
-        features: {
-          bm: ['Panel OLED dengan lapisan substrat tegar', 'Warna hitam yang mendalam dan kontras tinggi', 'Reka bentuk modul yang lebih tebal berbanding panel fleksibel'],
-          en: ['OLED panel with a rigid substrate layer', 'Deep blacks and high contrast', 'Thicker module compared to flexible panels']
-        },
-        pros: {
-          bm: ['Kontras tinggi', 'Warna lebih hidup berbanding LCD'],
-          en: ['High contrast', 'More vibrant colours than LCD']
-        },
-        cons: {
-          bm: ['Ketahanan terhadap hentakan bergantung pada panel dan pemasangan', 'Ketebalan modul boleh berbeza'],
-          en: ['Impact resistance depends on the panel and installation', 'Module thickness may differ']
-        }
+        features: { bm: ['Panel OLED dengan lapisan substrat tegar', 'Warna hitam yang mendalam dan kontras tinggi', 'Reka bentuk modul yang lebih tebal berbanding panel fleksibel'], en: ['OLED panel with a rigid substrate layer', 'Deep blacks and high contrast', 'Thicker module compared to flexible panels'] },
+        pros: { bm: ['Kontras tinggi', 'Warna lebih hidup berbanding LCD'], en: ['High contrast', 'More vibrant colours than LCD'] },
+        cons: { bm: ['Ketahanan terhadap hentakan bergantung pada panel dan pemasangan', 'Ketebalan modul boleh berbeza'], en: ['Impact resistance depends on the panel and installation', 'Module thickness may differ'] }
       },
-      {
-        id: 'soft-oled',
-        name: 'SOFT OLED',
+      { id: 'soft-oled', name: 'SOFT OLED',
         tag: { bm: 'OLED · Substrat fleksibel', en: 'OLED · Flexible substrate' },
-        desc: {
-          bm: 'Menggunakan substrat OLED fleksibel yang membolehkan reka bentuk panel lebih fleksibel.',
-          en: 'Uses a flexible OLED substrate which allows for a more flexible panel design.'
-        },
+        desc: { bm: 'Menggunakan substrat OLED fleksibel yang membolehkan reka bentuk panel lebih fleksibel.', en: 'Uses a flexible OLED substrate which allows for a more flexible panel design.' },
         tech: { bm: 'OLED fleksibel', en: 'Flexible OLED' },
         contrast: { bm: 'Ya — hitam mendalam', en: 'Yes — deep blacks' },
-        features: {
-          bm: ['Substrat fleksibel', 'Kontras tinggi dan warna hitam mendalam', 'Reka bentuk panel yang lebih nipis pada sesetengah model'],
-          en: ['Flexible substrate', 'High contrast and deep blacks', 'Thinner panel design on some models']
-        },
-        pros: {
-          bm: ['Kesesuaian bentuk dan reka bentuk skrin yang lebih baik', 'Pengalaman visual yang setanding panel OLED'],
-          en: ['Better form-factor and screen design compatibility', 'Visual experience comparable to OLED panels']
-        },
-        cons: {
-          bm: ['Ketahanan tidak boleh dijamin lebih tinggi untuk semua produk', 'Harga biasanya lebih tinggi berbanding LCD'],
-          en: ['Durability cannot be guaranteed to be higher for all products', 'Usually priced higher than LCD']
-        }
+        features: { bm: ['Substrat fleksibel', 'Kontras tinggi dan warna hitam mendalam', 'Reka bentuk panel yang lebih nipis pada sesetengah model'], en: ['Flexible substrate', 'High contrast and deep blacks', 'Thinner panel design on some models'] },
+        pros: { bm: ['Kesesuaian bentuk dan reka bentuk skrin yang lebih baik', 'Pengalaman visual yang setanding panel OLED'], en: ['Better form-factor and screen design compatibility', 'Visual experience comparable to OLED panels'] },
+        cons: { bm: ['Ketahanan tidak boleh dijamin lebih tinggi untuk semua produk', 'Harga biasanya lebih tinggi berbanding LCD'], en: ['Durability cannot be guaranteed to be higher for all products', 'Usually priced higher than LCD'] }
       },
-      {
-        id: 'original',
-        name: 'ORIGINAL',
+      { id: 'original', name: 'ORIGINAL',
         tag: { bm: 'Ikut jenis sebenar', en: 'Depends on actual type' },
-        desc: {
-          bm: 'Paparan pilihan original atau genuine yang benar-benar ditawarkan oleh kedai. Jenis sebenar akan disahkan sebelum pembaikan.',
-          en: 'The original or genuine display option actually offered by the shop. The exact type will be confirmed before repair.'
-        },
+        desc: { bm: 'Paparan pilihan original atau genuine yang benar-benar ditawarkan oleh kedai. Jenis sebenar akan disahkan sebelum pembaikan.', en: 'The original or genuine display option actually offered by the shop. The exact type will be confirmed before repair.' },
         tech: { bm: 'Ikut jenis sebenar', en: 'Depends on actual type' },
         contrast: { bm: 'Ikut panel', en: 'Depends on panel' },
-        features: {
-          bm: [
-            'Boleh merangkumi genuine Apple part, original pull, refurbished original atau istilah pembekal lain',
-            'Setiap jenis akan dijelaskan secara berasingan sebelum pembaikan',
-            'Status komponen disahkan terlebih dahulu'
-          ],
-          en: [
-            'May include genuine Apple part, original pull, refurbished original or other supplier terms',
-            'Each type is explained separately before repair',
-            'Component status is confirmed beforehand'
-          ]
-        },
-        pros: {
-          bm: ['Pilihan paling hampir dengan spesifikasi asal', 'Kualiti paparan biasanya konsisten'],
-          en: ['Closest option to original specifications', 'Display quality is usually consistent']
-        },
-        cons: {
-          bm: ['Harga lebih tinggi', 'Ketersediaan bergantung pada stok'],
-          en: ['Higher price', 'Availability depends on stock']
-        }
+        features: { bm: ['Boleh merangkumi genuine Apple part, original pull, refurbished original atau istilah pembekal lain', 'Setiap jenis akan dijelaskan secara berasingan sebelum pembaikan', 'Status komponen disahkan terlebih dahulu'], en: ['May include genuine Apple part, original pull, refurbished original or other supplier terms', 'Each type is explained separately before repair', 'Component status is confirmed beforehand'] },
+        pros: { bm: ['Pilihan paling hampir dengan spesifikasi asal', 'Kualiti paparan biasanya konsisten'], en: ['Closest option to original specifications', 'Display quality is usually consistent'] },
+        cons: { bm: ['Harga lebih tinggi', 'Ketersediaan bergantung pada stok'], en: ['Higher price', 'Availability depends on stock'] }
       }
     ],
-
     android: [
-      {
-        id: 'lcd-aftermarket',
-        name: 'LCD (AFTERMARKET)',
+      { id: 'lcd-aftermarket', name: 'LCD (AFTERMARKET)',
         tag: { bm: 'LCD · Pilihan jimat', en: 'LCD · Budget option' },
-        desc: {
-          bm: 'Pilihan panel LCD selepas pasaran untuk model Android yang serasi. Ketersediaan bergantung pada model dan stok semasa.',
-          en: 'Aftermarket LCD panel option for compatible Android models. Availability depends on the model and current stock.'
-        },
+        desc: { bm: 'Pilihan panel LCD selepas pasaran untuk model Android yang serasi. Ketersediaan bergantung pada model dan stok semasa.', en: 'Aftermarket LCD panel option for compatible Android models. Availability depends on the model and current stock.' },
         tech: { bm: 'LCD', en: 'LCD' },
         contrast: { bm: 'Tiada kontras OLED', en: 'No OLED-level contrast' },
-        features: {
-          bm: ['Panel LCD selepas pasaran', 'Kecerahan dan warna bergantung pada pengeluar', 'Hanya tersedia untuk model tertentu'],
-          en: ['Aftermarket LCD panel', 'Brightness and colour depend on the manufacturer', 'Only available for selected models']
-        },
-        pros: {
-          bm: ['Kos paling rendah', 'Sesuai untuk kegunaan asas'],
-          en: ['Lowest cost', 'Suitable for basic use']
-        },
-        cons: {
-          bm: ['Kontras tidak sedalam OLED', 'Kualiti berbeza antara pembekal'],
-          en: ['Contrast is not as deep as OLED', 'Quality varies between suppliers']
-        }
+        features: { bm: ['Panel LCD selepas pasaran', 'Kecerahan dan warna bergantung pada pengeluar', 'Hanya tersedia untuk model tertentu'], en: ['Aftermarket LCD panel', 'Brightness and colour depend on the manufacturer', 'Only available for selected models'] },
+        pros: { bm: ['Kos paling rendah', 'Sesuai untuk kegunaan asas'], en: ['Lowest cost', 'Suitable for basic use'] },
+        cons: { bm: ['Kontras tidak sedalam OLED', 'Kualiti berbeza antara pembekal'], en: ['Contrast is not as deep as OLED', 'Quality varies between suppliers'] }
       },
-      {
-        id: 'oled-hard',
-        name: 'OLED (HARD)',
+      { id: 'oled-hard', name: 'OLED (HARD)',
         tag: { bm: 'OLED · Substrat tegar', en: 'OLED · Rigid substrate' },
-        desc: {
-          bm: 'Panel OLED tegar untuk model Android yang menggunakan skrin OLED asal.',
-          en: 'Rigid OLED panel for Android models that originally use an OLED screen.'
-        },
+        desc: { bm: 'Panel OLED tegar untuk model Android yang menggunakan skrin OLED asal.', en: 'Rigid OLED panel for Android models that originally use an OLED screen.' },
         tech: { bm: 'OLED tegar', en: 'Rigid OLED' },
         contrast: { bm: 'Ya', en: 'Yes' },
-        features: {
-          bm: ['Kontras tinggi dan hitam mendalam', 'Sesuai untuk model yang menggunakan OLED asal', 'Ketersediaan bergantung pada model'],
-          en: ['High contrast and deep blacks', 'Suited to models that originally use OLED', 'Availability depends on the model']
-        },
-        pros: {
-          bm: ['Pengalaman visual setanding panel asal', 'Warna lebih tepat'],
-          en: ['Visual experience close to the original panel', 'More accurate colours']
-        },
-        cons: {
-          bm: ['Harga lebih tinggi daripada LCD', 'Stok terhad untuk sesetengah model'],
-          en: ['Priced higher than LCD', 'Limited stock for some models']
-        }
+        features: { bm: ['Kontras tinggi dan hitam mendalam', 'Sesuai untuk model yang menggunakan OLED asal', 'Ketersediaan bergantung pada model'], en: ['High contrast and deep blacks', 'Suited to models that originally use OLED', 'Availability depends on the model'] },
+        pros: { bm: ['Pengalaman visual setanding panel asal', 'Warna lebih tepat'], en: ['Visual experience close to the original panel', 'More accurate colours'] },
+        cons: { bm: ['Harga lebih tinggi daripada LCD', 'Stok terhad untuk sesetengah model'], en: ['Priced higher than LCD', 'Limited stock for some models'] }
       },
-      {
-        id: 'oled-soft',
-        name: 'OLED (SOFT)',
+      { id: 'oled-soft', name: 'OLED (SOFT)',
         tag: { bm: 'OLED · Substrat fleksibel', en: 'OLED · Flexible substrate' },
-        desc: {
-          bm: 'Panel OLED fleksibel untuk model Android tertentu yang memerlukan reka bentuk panel lebih nipis.',
-          en: 'Flexible OLED panel for selected Android models that require a thinner panel design.'
-        },
+        desc: { bm: 'Panel OLED fleksibel untuk model Android tertentu yang memerlukan reka bentuk panel lebih nipis.', en: 'Flexible OLED panel for selected Android models that require a thinner panel design.' },
         tech: { bm: 'OLED fleksibel', en: 'Flexible OLED' },
         contrast: { bm: 'Ya', en: 'Yes' },
-        features: {
-          bm: ['Substrat fleksibel', 'Reka bentuk nipis', 'Ketersediaan sangat bergantung pada model'],
-          en: ['Flexible substrate', 'Slim design', 'Availability strongly depends on the model']
-        },
-        pros: {
-          bm: ['Kesesuaian bentuk yang baik', 'Kontras tinggi'],
-          en: ['Good form-factor compatibility', 'High contrast']
-        },
-        cons: {
-          bm: ['Ketahanan bergantung pada panel dan pemasangan', 'Harga lebih tinggi'],
-          en: ['Durability depends on the panel and installation', 'Higher price']
-        }
+        features: { bm: ['Substrat fleksibel', 'Reka bentuk nipis', 'Ketersediaan sangat bergantung pada model'], en: ['Flexible substrate', 'Slim design', 'Availability strongly depends on the model'] },
+        pros: { bm: ['Kesesuaian bentuk yang baik', 'Kontras tinggi'], en: ['Good form-factor compatibility', 'High contrast'] },
+        cons: { bm: ['Ketahanan bergantung pada panel dan pemasangan', 'Harga lebih tinggi'], en: ['Durability depends on the panel and installation', 'Higher price'] }
       },
-      {
-        id: 'original-service-pack',
-        name: 'ORIGINAL / SERVICE PACK',
+      { id: 'original-service-pack', name: 'ORIGINAL / SERVICE PACK',
         tag: { bm: 'Ikut jenis sebenar', en: 'Depends on actual type' },
-        desc: {
-          bm: 'Pilihan original atau service pack yang benar-benar ditawarkan. Jenis sebenar (service pack, original pull, refurbished) akan disahkan sebelum pembaikan.',
-          en: 'The original or service pack option actually offered. The exact type (service pack, original pull, refurbished) will be confirmed before repair.'
-        },
+        desc: { bm: 'Pilihan original atau service pack yang benar-benar ditawarkan. Jenis sebenar (service pack, original pull, refurbished) akan disahkan sebelum pembaikan.', en: 'The original or service pack option actually offered. The exact type (service pack, original pull, refurbished) will be confirmed before repair.' },
         tech: { bm: 'Ikut jenis sebenar', en: 'Depends on actual type' },
         contrast: { bm: 'Ikut panel', en: 'Depends on panel' },
-        features: {
-          bm: ['Jenis komponen akan dijelaskan secara jujur', 'Ketersediaan bergantung pada model dan stok', 'Status komponen disahkan terlebih dahulu'],
-          en: ['Component type is explained honestly', 'Availability depends on model and stock', 'Component status is confirmed beforehand']
-        },
-        pros: {
-          bm: ['Spesifikasi paling hampir dengan asal', 'Kualiti biasanya konsisten'],
-          en: ['Specifications closest to original', 'Quality is usually consistent']
-        },
-        cons: {
-          bm: ['Harga paling tinggi', 'Stok terhad'],
-          en: ['Highest price', 'Limited stock']
-        }
+        features: { bm: ['Jenis komponen akan dijelaskan secara jujur', 'Ketersediaan bergantung pada model dan stok', 'Status komponen disahkan terlebih dahulu'], en: ['Component type is explained honestly', 'Availability depends on model and stock', 'Component status is confirmed beforehand'] },
+        pros: { bm: ['Spesifikasi paling hampir dengan asal', 'Kualiti biasanya konsisten'], en: ['Specifications closest to original', 'Quality is usually consistent'] },
+        cons: { bm: ['Harga paling tinggi', 'Stok terhad'], en: ['Highest price', 'Limited stock'] }
       }
     ]
   };
 
   const batteryGrades = [
-    {
-      id: 'oem',
-      name: 'ORIGINAL (OEM)',
-      tag: { bm: 'OEM', en: 'OEM' },
-      badgeClass: 'badge--warn',
-      desc: {
-        bm: 'Pilihan bateri OEM yang ditawarkan oleh kedai. Sahkan pengeluar, spesifikasi dan status komponen sebelum pemasangan.',
-        en: 'An OEM battery option offered by the shop. Confirm the manufacturer, specifications and component status before installation.'
-      },
+    { id: 'oem', name: 'ORIGINAL (OEM)', tag: { bm: 'OEM', en: 'OEM' }, badgeClass: 'badge--warn',
+      desc: { bm: 'Pilihan bateri OEM yang ditawarkan oleh kedai. Sahkan pengeluar, spesifikasi dan status komponen sebelum pemasangan.', en: 'An OEM battery option offered by the shop. Confirm the manufacturer, specifications and component status before installation.' },
       condition: { bm: 'Baharu (OEM) — sahkan spesifikasi', en: 'New (OEM) — confirm specifications' },
       capacity: { bm: 'Ikut spesifikasi produk sebenar', en: 'Depends on actual product specification' },
-      notes: {
-        bm: ['OEM tidak semestinya bermaksud bateri genuine Apple.', 'Sahkan pengeluar dan spesifikasi sebelum pemasangan.'],
-        en: ['OEM does not necessarily mean a genuine Apple battery.', 'Confirm the manufacturer and specifications before installation.']
-      }
+      notes: { bm: ['OEM tidak semestinya bermaksud bateri genuine Apple.', 'Sahkan pengeluar dan spesifikasi sebelum pemasangan.'], en: ['OEM does not necessarily mean a genuine Apple battery.', 'Confirm the manufacturer and specifications before installation.'] }
     },
-    {
-      id: 'bemax',
-      name: 'BEMAX HIGH CAPACITY',
-      tag: { bm: 'Kapasiti tinggi', en: 'High capacity' },
-      badgeClass: '',
-      desc: {
-        bm: 'Pilihan bateri berkapasiti tinggi daripada Bemax, tertakluk pada model yang serasi dan spesifikasi produk sebenar.',
-        en: 'A high-capacity battery option from Bemax, subject to compatible models and the actual product specification.'
-      },
+    { id: 'bemax', name: 'BEMAX HIGH CAPACITY', tag: { bm: 'Kapasiti tinggi', en: 'High capacity' }, badgeClass: '',
+      desc: { bm: 'Pilihan bateri berkapasiti tinggi daripada Bemax, tertakluk pada model yang serasi dan spesifikasi produk sebenar.', en: 'A high-capacity battery option from Bemax, subject to compatible models and the actual product specification.' },
       condition: { bm: 'Baharu — sahkan batch', en: 'New — confirm batch' },
       capacity: { bm: 'Paparkan mAh hanya apabila disahkan', en: 'mAh shown only when verified' },
-      notes: {
-        bm: [
-          'Kapasiti mAh akan dipaparkan hanya jika disahkan daripada spesifikasi produk.',
-          'Ketahanan bateri lebih lama tidak dijamin tanpa data sokongan.'
-        ],
-        en: [
-          'mAh capacity is shown only when verified from the product specification.',
-          'Longer battery life is not guaranteed without supporting data.'
-        ]
-      }
+      notes: { bm: ['Kapasiti mAh akan dipaparkan hanya jika disahkan daripada spesifikasi produk.', 'Ketahanan bateri lebih lama tidak dijamin tanpa data sokongan.'], en: ['mAh capacity is shown only when verified from the product specification.', 'Longer battery life is not guaranteed without supporting data.'] }
     },
-    {
-      id: 'diagnose-genuine',
-      name: 'ORIGINAL DIAGNOSE GENUINE',
-      tag: { bm: 'Diagnostik', en: 'Diagnosed' },
-      badgeClass: '',
-      desc: {
-        bm: 'Pilihan komponen genuine yang melalui pemeriksaan diagnostik, tertakluk pada keadaan, keserasian dan status komponen sebenar.',
-        en: 'A genuine component option that has passed diagnostic checks, subject to condition, compatibility and actual component status.'
-      },
+    { id: 'diagnose-genuine', name: 'ORIGINAL DIAGNOSE GENUINE', tag: { bm: 'Diagnostik', en: 'Diagnosed' }, badgeClass: '',
+      desc: { bm: 'Pilihan komponen genuine yang melalui pemeriksaan diagnostik, tertakluk pada keadaan, keserasian dan status komponen sebenar.', en: 'A genuine component option that has passed diagnostic checks, subject to condition, compatibility and actual component status.' },
       condition: { bm: 'Ikut status komponen sebenar', en: 'Depends on actual component status' },
       capacity: { bm: 'Dipaparkan jika direkodkan', en: 'Shown if recorded' },
-      notes: {
-        bm: [
-          'Bateri tidak didakwa baharu jika ia bukan baharu.',
-          'Keadaan komponen disahkan melalui diagnostik sebelum ditawarkan.'
-        ],
-        en: [
-          'The battery is not claimed to be new if it is not new.',
-          'Component condition is verified through diagnostics before being offered.'
-        ]
-      }
+      notes: { bm: ['Bateri tidak didakwa baharu jika ia bukan baharu.', 'Keadaan komponen disahkan melalui diagnostik sebelum ditawarkan.'], en: ['The battery is not claimed to be new if it is not new.', 'Component condition is verified through diagnostics before being offered.'] }
     },
-    {
-      id: 'diagnose-used',
-      name: 'ORIGINAL DIAGNOSE USED',
-      tag: { bm: 'Terpakai · Diagnostik', en: 'Used · Diagnosed' },
-      badgeClass: 'badge--warn',
-      desc: {
-        bm: 'Pilihan bateri original terpakai yang diperiksa menggunakan diagnostik sebelum ditawarkan untuk pemasangan.',
-        en: 'A used original battery option that is checked with diagnostics before being offered for installation.'
-      },
+    { id: 'diagnose-used', name: 'ORIGINAL DIAGNOSE USED', tag: { bm: 'Terpakai · Diagnostik', en: 'Used · Diagnosed' }, badgeClass: 'badge--warn',
+      desc: { bm: 'Pilihan bateri original terpakai yang diperiksa menggunakan diagnostik sebelum ditawarkan untuk pemasangan.', en: 'A used original battery option that is checked with diagnostics before being offered for installation.' },
       condition: { bm: 'Terpakai — diperiksa diagnostik', en: 'Used — diagnostically checked' },
       capacity: { bm: 'Dipaparkan jika direkodkan', en: 'Shown if recorded' },
-      notes: {
-        bm: [
-          'Keadaan bateri, kapasiti maksimum atau maklumat diagnostik dipaparkan hanya apabila benar-benar direkodkan.',
-          'Prestasi bateri terpakai boleh berbeza antara unit.'
-        ],
-        en: [
-          'Battery condition, maximum capacity or diagnostic data are shown only when actually recorded.',
-          'Used battery performance may vary between units.'
-        ]
-      }
+      notes: { bm: ['Keadaan bateri, kapasiti maksimum atau maklumat diagnostik dipaparkan hanya apabila benar-benar direkodkan.', 'Prestasi bateri terpakai boleh berbeza antara unit.'], en: ['Battery condition, maximum capacity or diagnostic data are shown only when actually recorded.', 'Used battery performance may vary between units.'] }
     }
   ];
 
@@ -2282,96 +2161,15 @@ table.cmp td{color:var(--text);}
   ];
 
   const services = [
-    {
-      id: 'water',
-      icon: 'water',
-      title: { bm: 'Water Damage Repair', en: 'Water Damage Repair' },
-      desc: { bm: 'Untuk telefon terkena air atau cecair.', en: 'For phones exposed to water or liquid.' },
-      notes: {
-        bm: ['Matikan telefon dan jangan mengecasnya.', 'Pemeriksaan diperlukan sebelum sebarang keputusan.', 'Hasil pembaikan tidak boleh dijamin.'],
-        en: ['Turn the phone off and do not charge it.', 'Assessment is required before any decision.', 'Repair outcome cannot be guaranteed.']
-      }
-    },
-    {
-      id: 'flashing',
-      icon: 'chip',
-      title: { bm: 'Software Flashing', en: 'Software Flashing' },
-      desc: { bm: 'Masalah sistem, bootloop dan isu software tertentu.', en: 'System issues, bootloops and certain software problems.' },
-      notes: {
-        bm: ['Flashing boleh memadamkan data.', 'Pelanggan perlu mengesahkan sandaran dan pemilikan peranti.'],
-        en: ['Flashing may erase data.', 'Customer must confirm backup and device ownership.']
-      }
-    },
-    {
-      id: 'network',
-      icon: 'signal',
-      title: { bm: 'Telco Lock / Network Lock', en: 'Telco Lock / Network Lock' },
-      desc: { bm: 'Semakan status kunci rangkaian peranti.', en: 'Checking the device network lock status.' },
-      notes: {
-        bm: ['Kelayakan unlock bergantung pada telco, model dan status peranti.', 'Kaedah rasmi dan dibenarkan diutamakan.'],
-        en: ['Unlock eligibility depends on the telco, model and device status.', 'Official and authorised methods are prioritised.']
-      }
-    },
-    {
-      id: 'activation',
-      icon: 'lock',
-      title: { bm: 'Activation Lock Support', en: 'Activation Lock Support' },
-      desc: { bm: 'Bantuan untuk pemilik melalui proses pemulihan akaun dan prosedur rasmi.', en: 'Assistance for owners through account recovery and official procedures.' },
-      notes: {
-        bm: ['Bantuan diberikan kepada pemilik sah peranti sahaja.', 'Kami tidak menawarkan kaedah memintas keselamatan atau mengelak Activation Lock tanpa kebenaran.'],
-        en: ['Assistance is provided to the legitimate device owner only.', 'We do not offer security bypass or unauthorised Activation Lock avoidance.']
-      }
-    },
-    {
-      id: 'battery-service',
-      icon: 'battery',
-      title: { bm: 'Battery Replacement', en: 'Battery Replacement' },
-      desc: { bm: 'Pemeriksaan kesihatan bateri dan pilihan penggantian.', en: 'Battery health check and replacement options.' },
-      notes: {
-        bm: ['Pilihan gred bateri diterangkan sebelum pemasangan.'],
-        en: ['Battery grade options are explained before installation.']
-      }
-    },
-    {
-      id: 'charging-port',
-      icon: 'plug',
-      title: { bm: 'Charging Port Repair', en: 'Charging Port Repair' },
-      desc: { bm: 'Pemeriksaan port pengecasan dan sambungan.', en: 'Inspection of the charging port and connections.' },
-      notes: {
-        bm: ['Pemeriksaan diperlukan untuk menentukan punca sebenar.'],
-        en: ['Assessment is required to determine the actual cause.']
-      }
-    },
-    {
-      id: 'camera',
-      icon: 'camera',
-      title: { bm: 'Camera Repair', en: 'Camera Repair' },
-      desc: { bm: 'Isu kamera kabur, tidak fokus atau tidak berfungsi.', en: 'Blurry, out-of-focus or non-functioning camera issues.' },
-      notes: {
-        bm: ['Kerosakan boleh melibatkan lensa, modul atau perisian.'],
-        en: ['The issue may involve the lens, module or software.']
-      }
-    },
-    {
-      id: 'audio',
-      icon: 'speaker',
-      title: { bm: 'Speaker / Microphone Repair', en: 'Speaker / Microphone Repair' },
-      desc: { bm: 'Isu bunyi, mikrofon dan panggilan.', en: 'Sound, microphone and call issues.' },
-      notes: {
-        bm: ['Pemeriksaan merangkumi speaker, mikrofon dan mesh pelindung.'],
-        en: ['Assessment covers the speaker, microphone and protective mesh.']
-      }
-    },
-    {
-      id: 'diagnostic-service',
-      icon: 'stethoscope',
-      title: { bm: 'Diagnosis & Troubleshooting', en: 'Diagnosis & Troubleshooting' },
-      desc: { bm: 'Pemeriksaan awal untuk masalah yang belum dikenal pasti.', en: 'Initial assessment for problems that have not yet been identified.' },
-      notes: {
-        bm: ['Keputusan diagnostik akan dimaklumkan sebelum sebarang kerja tambahan.'],
-        en: ['Diagnostic results are shared before any additional work.']
-      }
-    }
+    { id: 'water', icon: 'water', title: { bm: 'Water Damage Repair', en: 'Water Damage Repair' }, desc: { bm: 'Untuk telefon terkena air atau cecair.', en: 'For phones exposed to water or liquid.' }, notes: { bm: ['Matikan telefon dan jangan mengecasnya.', 'Pemeriksaan diperlukan sebelum sebarang keputusan.', 'Hasil pembaikan tidak boleh dijamin.'], en: ['Turn the phone off and do not charge it.', 'Assessment is required before any decision.', 'Repair outcome cannot be guaranteed.'] } },
+    { id: 'flashing', icon: 'chip', title: { bm: 'Software Flashing', en: 'Software Flashing' }, desc: { bm: 'Masalah sistem, bootloop dan isu software tertentu.', en: 'System issues, bootloops and certain software problems.' }, notes: { bm: ['Flashing boleh memadamkan data.', 'Pelanggan perlu mengesahkan sandaran dan pemilikan peranti.'], en: ['Flashing may erase data.', 'Customer must confirm backup and device ownership.'] } },
+    { id: 'network', icon: 'signal', title: { bm: 'Telco Lock / Network Lock', en: 'Telco Lock / Network Lock' }, desc: { bm: 'Semakan status kunci rangkaian peranti.', en: 'Checking the device network lock status.' }, notes: { bm: ['Kelayakan unlock bergantung pada telco, model dan status peranti.', 'Kaedah rasmi dan dibenarkan diutamakan.'], en: ['Unlock eligibility depends on the telco, model and device status.', 'Official and authorised methods are prioritised.'] } },
+    { id: 'activation', icon: 'lock', title: { bm: 'Activation Lock Support', en: 'Activation Lock Support' }, desc: { bm: 'Bantuan untuk pemilik melalui proses pemulihan akaun dan prosedur rasmi.', en: 'Assistance for owners through account recovery and official procedures.' }, notes: { bm: ['Bantuan diberikan kepada pemilik sah peranti sahaja.', 'Kami tidak menawarkan kaedah memintas keselamatan atau mengelak Activation Lock tanpa kebenaran.'], en: ['Assistance is provided to the legitimate device owner only.', 'We do not offer security bypass or unauthorised Activation Lock avoidance.'] } },
+    { id: 'battery-service', icon: 'battery', title: { bm: 'Battery Replacement', en: 'Battery Replacement' }, desc: { bm: 'Pemeriksaan kesihatan bateri dan pilihan penggantian.', en: 'Battery health check and replacement options.' }, notes: { bm: ['Pilihan gred bateri diterangkan sebelum pemasangan.'], en: ['Battery grade options are explained before installation.'] } },
+    { id: 'charging-port', icon: 'plug', title: { bm: 'Charging Port Repair', en: 'Charging Port Repair' }, desc: { bm: 'Pemeriksaan port pengecasan dan sambungan.', en: 'Inspection of the charging port and connections.' }, notes: { bm: ['Pemeriksaan diperlukan untuk menentukan punca sebenar.'], en: ['Assessment is required to determine the actual cause.'] } },
+    { id: 'camera', icon: 'camera', title: { bm: 'Camera Repair', en: 'Camera Repair' }, desc: { bm: 'Isu kamera kabur, tidak fokus atau tidak berfungsi.', en: 'Blurry, out-of-focus or non-functioning camera issues.' }, notes: { bm: ['Kerosakan boleh melibatkan lensa, modul atau perisian.'], en: ['The issue may involve the lens, module or software.'] } },
+    { id: 'audio', icon: 'speaker', title: { bm: 'Speaker / Microphone Repair', en: 'Speaker / Microphone Repair' }, desc: { bm: 'Isu bunyi, mikrofon dan panggilan.', en: 'Sound, microphone and call issues.' }, notes: { bm: ['Pemeriksaan merangkumi speaker, mikrofon dan mesh pelindung.'], en: ['Assessment covers the speaker, microphone and protective mesh.'] } },
+    { id: 'diagnostic-service', icon: 'stethoscope', title: { bm: 'Diagnosis & Troubleshooting', en: 'Diagnosis & Troubleshooting' }, desc: { bm: 'Pemeriksaan awal untuk masalah yang belum dikenal pasti.', en: 'Initial assessment for problems that have not yet been identified.' }, notes: { bm: ['Keputusan diagnostik akan dimaklumkan sebelum sebarang kerja tambahan.'], en: ['Diagnostic results are shared before any additional work.'] } }
   ];
 
   const processSteps = [
@@ -2441,13 +2239,11 @@ table.cmp td{color:var(--text);}
       'nav.cta': 'Get Repair Quote',
       'drawer.models': 'Pilih Model',
       'drawer.builder': 'Quotation Builder',
-
       'tab.home': 'Home',
       'tab.lcd': 'LCD',
       'tab.battery': 'Bateri',
       'tab.services': 'Servis',
       'tab.quote': 'Quote',
-
       'hero.badge': 'Screen Repair · Battery · Diagnostics',
       'hero.title1': 'Cracked Screen? Weak Battery?',
       'hero.title2': "Let's Get Your Phone Back in Action.",
@@ -2460,7 +2256,6 @@ table.cmp td{color:var(--text);}
       'hero.trust4': 'Maklumat warranty mengikut servis dan komponen.',
       'hero.labelBefore': 'Before',
       'hero.labelAfter': 'After',
-
       'models.eyebrow': 'Langkah 1',
       'models.title': 'Tell Us About Your Phone',
       'models.sub': 'Pilih jenama, model dan masalah peranti anda. Pilihan ini akan menapis gred komponen yang tersedia dan mengisi quotation anda secara automatik.',
@@ -2471,11 +2266,9 @@ table.cmp td{color:var(--text);}
       'models.modelPlaceholder': 'Pilih jenama terlebih dahulu…',
       'models.modelPrompt': 'Pilih model anda…',
       'models.otherModel': 'Model lain — nyatakan dalam nota',
-
       'progress.1': 'Device Selected',
       'progress.2': 'Grade Selected',
       'progress.3': 'Request Quote',
-
       'lcd.eyebrow': 'LCD & Display Studio',
       'lcd.title': 'Not All Screens Are the Same.',
       'lcd.sub': 'Pilih pilihan paparan yang sesuai dengan bajet, keutamaan visual dan keperluan pembaikan anda. Bandingkan gred yang tersedia sebelum meminta quotation.',
@@ -2496,7 +2289,6 @@ table.cmp td{color:var(--text);}
       'lcd.warrantyTbc': 'Ikut servis',
       'lcd.availabilityNote': 'Ketersediaan gred bergantung pada model, pembekal dan stok semasa. Sesetengah model mungkin tidak mempunyai semua pilihan. Jika keserasian belum ditentukan, status akan dipaparkan sebagai "Availability needs confirmation" — sahkan melalui WhatsApp.',
       'lcd.needModel': 'Pilih model terlebih dahulu untuk menyemak keserasian gred ini.',
-
       'battery.eyebrow': 'Battery Studio',
       'battery.title': 'Choose the Right Battery for Your Phone.',
       'battery.sub': 'Bandingkan pilihan bateri, fahami perbezaannya dan minta quotation sebelum meneruskan pembaikan.',
@@ -2504,12 +2296,10 @@ table.cmp td{color:var(--text);}
       'battery.conditionLabel': 'Keadaan komponen',
       'battery.capacityLabel': 'Kapasiti',
       'battery.availabilityNote': 'Kapasiti mAh dan keadaan bateri dipaparkan hanya apabila disahkan daripada spesifikasi produk atau rekod diagnostik sebenar.',
-
       'services.eyebrow': 'Servis Lain',
       'services.title': 'More Than Just Screen Repairs.',
       'services.sub': 'Daripada masalah telefon harian sehingga diagnostik yang lebih kompleks — beritahu kami apa yang dialami peranti anda dan biar pasukan kami menilai langkah seterusnya.',
       'services.cta': 'Enquire About This Service',
-
       'builder.eyebrow': 'Quotation Builder',
       'builder.title': 'Build Your Repair Request.',
       'builder.sub': 'Semak pilihan anda, tambah nota dan hantar permintaan quotation terus kepada kami melalui WhatsApp.',
@@ -2539,26 +2329,21 @@ table.cmp td{color:var(--text);}
       'builder.priceConfirm': 'Price confirmation required',
       'builder.availConfirm': 'Availability needs confirmation',
       'builder.warrantyTbc': 'Akan dijelaskan sebelum repair',
-
       'process.eyebrow': 'Proses',
       'process.title': 'Simple Process. Clear Communication.',
       'process.sub': 'Empat langkah mudah — daripada pertanyaan pertama sehingga anda menerima semula peranti anda.',
-
       'trust.eyebrow': 'Ketelusan',
       'trust.title': "Know What You're Paying For.",
       'trust.confirmTitle': 'What to Confirm Before Repair',
       'trust.confirmSub': 'Sebelum memberi kebenaran, pastikan anda jelas tentang perkara berikut.',
-
       'faq.eyebrow': 'FAQ',
       'faq.title': 'Soalan Lazim',
       'faq.sub': 'Jawapan ringkas dan jujur tentang gred komponen, harga dan proses pembaikan.',
-
       'final.title': "Let's Get Your Phone Working Again.",
       'final.sub': 'Pilih pilihan pembaikan anda, tanya soalan anda dan dapatkan quotation terus daripada Corakempire Smart Phone Repair.',
       'final.cta1': 'Get a Repair Quote',
       'final.cta2': 'Chat on WhatsApp',
       'final.area': 'Kawasan servis: Kamunting / Taiping, Perak',
-
       'footer.desc': 'Phone Repair & Service. Pilihan komponen yang telus, quotation yang jelas dan komunikasi yang mudah.',
       'footer.nav': 'Navigasi',
       'footer.contact': 'Hubungi',
@@ -2566,25 +2351,20 @@ table.cmp td{color:var(--text);}
       'footer.social': 'Social media (akan dikemas kini)',
       'footer.quote': 'Get a Repair Quote',
       'footer.privacy': 'Notis Privasi: Maklumat yang anda hantar melalui WhatsApp hanya digunakan untuk memproses permintaan pembaikan anda.',
-
       'mobile.quote': 'Get Quote',
-
       'compare.title': 'Perbandingan Gred',
       'compare.sub': 'Maklumat di bawah adalah panduan umum. Ciri sebenar bergantung pada pengeluar panel, model dan pemasangan.',
       'compare.cta': 'Request a Quotation',
       'compare.feature': 'Ciri',
-
       'service.add': 'Add to Quotation',
       'service.close': 'Tutup',
       'service.added': 'Servis ditambah ke quotation anda.',
-
       'toast.modelRequired': 'Sila pilih jenama dan model telefon terlebih dahulu.',
       'toast.gradeSelected': 'Gred dipilih.',
       'toast.serviceSelected': 'Servis dipilih.',
       'toast.notesRequired': 'Sila masukkan penerangan ringkas kerosakan.',
       'toast.waNotConfigured': 'Nombor WhatsApp perniagaan belum dikonfigurasi.',
       'toast.reset': 'Pilihan telah direset.',
-
       'wa.greeting': 'Hi Corakempire Smart Phone Repair, saya ingin mendapatkan quotation.',
       'wa.device': 'Device',
       'wa.issue': 'Issue',
@@ -2593,7 +2373,6 @@ table.cmp td{color:var(--text);}
       'wa.notes': 'Notes',
       'wa.name': 'Name',
       'wa.closing': 'Boleh semak harga, ketersediaan komponen dan warranty yang berkenaan?',
-
       'receipt.btn': 'Resit',
       'receipt.title': 'Resit Generator',
       'receipt.sub': 'Jana resit pelanggan dan cetak atau simpan sebagai PDF.',
@@ -2622,13 +2401,11 @@ table.cmp td{color:var(--text);}
       'nav.cta': 'Get Repair Quote',
       'drawer.models': 'Choose Model',
       'drawer.builder': 'Quotation Builder',
-
       'tab.home': 'Home',
       'tab.lcd': 'LCD',
       'tab.battery': 'Battery',
       'tab.services': 'Services',
       'tab.quote': 'Quote',
-
       'hero.badge': 'Screen Repair · Battery · Diagnostics',
       'hero.title1': 'Cracked Screen? Weak Battery?',
       'hero.title2': "Let's Get Your Phone Back in Action.",
@@ -2641,7 +2418,6 @@ table.cmp td{color:var(--text);}
       'hero.trust4': 'Warranty information by service and component.',
       'hero.labelBefore': 'Before',
       'hero.labelAfter': 'After',
-
       'models.eyebrow': 'Step 1',
       'models.title': 'Tell Us About Your Phone',
       'models.sub': 'Select your brand, model and device issue. These choices filter available component grades and fill your quotation automatically.',
@@ -2652,11 +2428,9 @@ table.cmp td{color:var(--text);}
       'models.modelPlaceholder': 'Choose a brand first…',
       'models.modelPrompt': 'Select your model…',
       'models.otherModel': 'Other model — describe in notes',
-
       'progress.1': 'Device Selected',
       'progress.2': 'Grade Selected',
       'progress.3': 'Request Quote',
-
       'lcd.eyebrow': 'LCD & Display Studio',
       'lcd.title': 'Not All Screens Are the Same.',
       'lcd.sub': 'Choose a display option that fits your budget, visual preference and repair needs. Compare the available grades before requesting a quotation.',
@@ -2677,7 +2451,6 @@ table.cmp td{color:var(--text);}
       'lcd.warrantyTbc': 'Depends on service',
       'lcd.availabilityNote': 'Grade availability depends on the model, supplier and current stock. Some models may not have every option. If compatibility has not been determined, the status will show as "Availability needs confirmation" — confirm via WhatsApp.',
       'lcd.needModel': 'Select a model first to check compatibility for this grade.',
-
       'battery.eyebrow': 'Battery Studio',
       'battery.title': 'Choose the Right Battery for Your Phone.',
       'battery.sub': 'Compare battery options, understand the differences and request a quote before proceeding with your repair.',
@@ -2685,12 +2458,10 @@ table.cmp td{color:var(--text);}
       'battery.conditionLabel': 'Component condition',
       'battery.capacityLabel': 'Capacity',
       'battery.availabilityNote': 'mAh capacity and battery condition are shown only when verified from the actual product specification or diagnostic record.',
-
       'services.eyebrow': 'Other Services',
       'services.title': 'More Than Just Screen Repairs.',
       'services.sub': 'From everyday phone issues to more complex diagnostics, tell us what your device is experiencing and let our team assess the next step.',
       'services.cta': 'Enquire About This Service',
-
       'builder.eyebrow': 'Quotation Builder',
       'builder.title': 'Build Your Repair Request.',
       'builder.sub': 'Review your choices, add notes and send your quotation request straight to us through WhatsApp.',
@@ -2720,26 +2491,21 @@ table.cmp td{color:var(--text);}
       'builder.priceConfirm': 'Price confirmation required',
       'builder.availConfirm': 'Availability needs confirmation',
       'builder.warrantyTbc': 'To be explained before repair',
-
       'process.eyebrow': 'Process',
       'process.title': 'Simple Process. Clear Communication.',
       'process.sub': 'Four simple steps — from your first enquiry until you get your device back.',
-
       'trust.eyebrow': 'Transparency',
       'trust.title': "Know What You're Paying For.",
       'trust.confirmTitle': 'What to Confirm Before Repair',
       'trust.confirmSub': 'Before giving approval, make sure you are clear about the following.',
-
       'faq.eyebrow': 'FAQ',
       'faq.title': 'Frequently Asked Questions',
       'faq.sub': 'Short and honest answers about component grades, pricing and the repair process.',
-
       'final.title': "Let's Get Your Phone Working Again.",
       'final.sub': 'Choose your repair options, ask your questions and get a quotation directly from Corakempire Smart Phone Repair.',
       'final.cta1': 'Get a Repair Quote',
       'final.cta2': 'Chat on WhatsApp',
       'final.area': 'Service area: Kamunting / Taiping, Perak',
-
       'footer.desc': 'Phone Repair & Service. Transparent component options, clear quotations and easy communication.',
       'footer.nav': 'Navigation',
       'footer.contact': 'Contact',
@@ -2747,25 +2513,20 @@ table.cmp td{color:var(--text);}
       'footer.social': 'Social media (to be updated)',
       'footer.quote': 'Get a Repair Quote',
       'footer.privacy': 'Privacy notice: Information you send via WhatsApp is used only to process your repair request.',
-
       'mobile.quote': 'Get Quote',
-
       'compare.title': 'Grade Comparison',
       'compare.sub': 'The information below is a general guide. Actual characteristics depend on the panel manufacturer, model and installation.',
       'compare.cta': 'Request a Quotation',
       'compare.feature': 'Feature',
-
       'service.add': 'Add to Quotation',
       'service.close': 'Close',
       'service.added': 'Service added to your quotation.',
-
       'toast.modelRequired': 'Please select a phone brand and model first.',
       'toast.gradeSelected': 'Grade selected.',
       'toast.serviceSelected': 'Service selected.',
       'toast.notesRequired': 'Please enter a brief description of the damage.',
       'toast.waNotConfigured': 'The business WhatsApp number is not configured yet.',
       'toast.reset': 'Your choices have been reset.',
-
       'wa.greeting': 'Hi Corakempire Smart Phone Repair, I would like to get a quotation.',
       'wa.device': 'Device',
       'wa.issue': 'Issue',
@@ -2774,7 +2535,6 @@ table.cmp td{color:var(--text);}
       'wa.notes': 'Notes',
       'wa.name': 'Name',
       'wa.closing': 'Could you check the price, component availability and applicable warranty?',
-
       'receipt.btn': 'Receipt',
       'receipt.title': 'Receipt Generator',
       'receipt.sub': 'Generate a customer receipt and print or save it as PDF.',
@@ -3265,7 +3025,7 @@ table.cmp td{color:var(--text);}
 
       const actions = el('div', 'grade__actions');
 
-      const selectBtn = el('button', 'btn btn--primary btn--sm', appState.selectedBatteryGrade === g.id ? t('lcd.selected') : (appState.lang === 'bm' ? 'Select Battery' : 'Select Battery'));
+      const selectBtn = el('button', 'btn btn--primary btn--sm', appState.selectedBatteryGrade === g.id ? t('lcd.selected') : 'Select Battery');
       selectBtn.type = 'button';
       selectBtn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -3728,7 +3488,6 @@ table.cmp td{color:var(--text);}
     window.open(waLink(base), '_blank', 'noopener');
   }
 
-
   /* =======================================================================
      14. MODALS
      ======================================================================= */
@@ -3896,6 +3655,65 @@ table.cmp td{color:var(--text);}
   }
 
   /* =======================================================================
+     STAFF LOGIN GATE
+     ======================================================================= */
+  let _loginSuccessCb = null;
+
+  function openLoginModal(onSuccess) {
+    const loginModal = document.getElementById('loginModal');
+    const form = document.getElementById('staffLoginForm');
+    const errEl = document.getElementById('loginError');
+    if (!loginModal || !form) return;
+
+    _loginSuccessCb = typeof onSuccess === 'function' ? onSuccess : null;
+    form.reset();
+    if (errEl) errEl.style.display = 'none';
+    openModal(loginModal);
+
+    setTimeout(function () {
+      const idInput = document.getElementById('staffId');
+      if (idInput) idInput.focus();
+    }, 120);
+  }
+
+  function initLogin() {
+    const form = document.getElementById('staffLoginForm');
+    const loginModal = document.getElementById('loginModal');
+    const errEl = document.getElementById('loginError');
+    if (!form || !loginModal) return;
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const idEl = document.getElementById('staffId');
+      const passEl = document.getElementById('staffPass');
+      const id = (idEl ? idEl.value : '').trim();
+      const pass = passEl ? passEl.value : '';
+
+      if (id === STAFF_CREDENTIALS.id && pass === STAFF_CREDENTIALS.password) {
+        setStaffAuthenticated();
+        if (errEl) errEl.style.display = 'none';
+        closeModal(loginModal);
+        const cb = _loginSuccessCb;
+        _loginSuccessCb = null;
+        if (typeof cb === 'function') cb();
+      } else {
+        if (errEl) errEl.style.display = 'block';
+        if (passEl) { passEl.value = ''; passEl.focus(); }
+      }
+    });
+
+    // Klik luar / butang tutup → batalkan callback
+    loginModal.addEventListener('click', function (e) {
+      if (e.target === loginModal) _loginSuccessCb = null;
+    });
+    loginModal.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        _loginSuccessCb = null;
+      });
+    });
+  }
+
+  /* =======================================================================
      15. TOAST
      ======================================================================= */
   let toastTimer = null;
@@ -4051,7 +3869,6 @@ table.cmp td{color:var(--text);}
       }
     });
 
-    /* Active nav highlight (top nav) */
     if ('IntersectionObserver' in window) {
       const sections = ['#top', '#lcd', '#battery', '#services', '#faq'];
       const navObserver = new IntersectionObserver(function (entries) {
@@ -4069,7 +3886,6 @@ table.cmp td{color:var(--text);}
         if (node && node.id) navObserver.observe(node);
       });
 
-      /* Active bottom tab highlight */
       const tabObserver = new IntersectionObserver(function (entries) {
         let best = null;
         entries.forEach(function (entry) {
@@ -4090,17 +3906,14 @@ table.cmp td{color:var(--text);}
       });
     }
 
-    /* Initial tab state */
     setActiveTab('top');
 
-    /* Tap feedback + smooth scroll for tab bar links */
     $$('.mobile-tab').forEach(function (tab) {
       tab.addEventListener('click', function (e) {
         const targetId = tab.getAttribute('data-mtab');
         const target = document.getElementById(targetId);
         if (!target) return;
         e.preventDefault();
-        /* Update active state immediately for snappy feel */
         setActiveTab(targetId);
         const headerOffset = targetId === 'top' ? 0 : 76;
         const rect = target.getBoundingClientRect();
@@ -4139,7 +3952,6 @@ table.cmp td{color:var(--text);}
         $$('[data-tab]').forEach(function (b) {
           b.setAttribute('aria-selected', String(b === tabBtn));
         });
-        // Kemas kini aria-labelledby pada panel dikongsi
         const panel = document.getElementById('panel-lcd');
         if (panel) panel.setAttribute('aria-labelledby', tabBtn.id);
 
@@ -4453,11 +4265,21 @@ table.cmp td{color:var(--text);}
       input.addEventListener('change', updateReceiptPreview);
     });
 
-    openBtn.addEventListener('click', function () {
+    function proceedToReceipt() {
       if (noField && !noField.value) noField.value = generateReceiptNo();
       if (dateField && !dateField.value) dateField.value = todayISO();
       updateReceiptPreview();
       openModal(modal);
+    }
+
+    openBtn.addEventListener('click', function () {
+      if (isStaffAuthenticated()) {
+        proceedToReceipt();
+        return;
+      }
+      openLoginModal(function onSuccess() {
+        proceedToReceipt();
+      });
     });
 
     const newNoBtn = document.getElementById('newReceiptNoBtn');
@@ -4493,7 +4315,6 @@ table.cmp td{color:var(--text);}
       appState.activeLcdTab = 'iphone';
     }
 
-    // Set aria-selected + aria-labelledby pada state awal
     $$('[data-tab]').forEach(function (b) {
       const isActive = b.getAttribute('data-tab') === appState.activeLcdTab;
       b.setAttribute('aria-selected', String(isActive));
@@ -4513,9 +4334,9 @@ table.cmp td{color:var(--text);}
     initEvents();
     initPlaceholderLinks();
     initAnimations();
+    initLogin();
     initReceipt();
 
-    /* Keep tab bar active state in sync when user scrolls manually */
     let scrollTick = null;
     window.addEventListener('scroll', function () {
       if (scrollTick) return;
@@ -4543,4 +4364,3 @@ table.cmp td{color:var(--text);}
 
 </body>
 </html>
-``
